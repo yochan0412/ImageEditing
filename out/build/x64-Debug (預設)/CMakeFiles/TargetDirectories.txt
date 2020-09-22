@@ -1,0 +1,4 @@
+E:/1091CG/ImageEditing/out/build/x64-Debug (預設)/CMakeFiles/ImageEditing.dir
+E:/1091CG/ImageEditing/out/build/x64-Debug (預設)/CMakeFiles/libtarga.dir
+E:/1091CG/ImageEditing/out/build/x64-Debug (預設)/CMakeFiles/edit_cache.dir
+E:/1091CG/ImageEditing/out/build/x64-Debug (預設)/CMakeFiles/rebuild_cache.dir
