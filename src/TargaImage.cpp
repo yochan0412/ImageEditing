@@ -20,6 +20,7 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <map>
 
 using namespace std;
 
@@ -209,7 +210,7 @@ TargaImage* TargaImage::Load_Image(char* filename)
 //  success of operation.
 //
 ///////////////////////////////////////////////////////////////////////////////
-bool TargaImage::To_Grayscale()   
+bool TargaImage::To_Grayscale()
 {
 	for (int i = 0; i < height; i++)
 	{
@@ -219,7 +220,7 @@ bool TargaImage::To_Grayscale()
 			I += data[(i * width + j) * 4] * 0.299;//R
 			I += data[(i * width + j) * 4 + 1] * 0.587;//G
 			I += data[(i * width + j) * 4 + 2] * 0.114;//B
-			
+
 			data[(i * width + j) * 4] = I; //R
 			data[(i * width + j) * 4 + 1] = I; //G
 			data[(i * width + j) * 4 + 2] = I; //B
@@ -235,7 +236,7 @@ bool TargaImage::To_Grayscale()
 //  success of operation.
 //
 ///////////////////////////////////////////////////////////////////////////////
-bool TargaImage::Quant_Uniform()   
+bool TargaImage::Quant_Uniform()
 {
 	for (int i = 0; i < height; i++)
 	{
@@ -250,6 +251,11 @@ bool TargaImage::Quant_Uniform()
 }// Quant_Uniform
 
 
+void Store(char red, char green, char blue)
+{
+
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 //      Convert the image to an 8 bit image using populosity quantization.  
@@ -258,7 +264,46 @@ bool TargaImage::Quant_Uniform()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Quant_Populosity()
 {
-	ClearToBlack();
+	map<string, unsigned int>list;
+	vector<pair<string, unsigned int>> sortList;
+
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			bool Has_color = false;
+			string temp;
+
+			data[(i * width + j) * 4] &= 0xF8;//R
+			data[(i * width + j) * 4 + 1] &= 0xF8;//G
+			data[(i * width + j) * 4 + 2] &= 0xF8;//B
+
+			temp += to_string(int(data[(i * width + j) * 4]));
+			temp += "/";
+			temp += to_string(int(data[(i * width + j) * 4 + 1]));
+			temp += "/";
+			temp += to_string(int(data[(i * width + j) * 4 + 2]));
+
+			if (list.find(temp) != list.end()) //found
+			{
+				list[temp]++;
+			}
+			else //not found
+			{
+				list[temp] = 1;
+			}
+		}
+	}
+
+	for (const auto& v : list)
+	{
+		sortList.push_back(v);
+	}
+
+	sort(sortList.begin(), sortList.end(), [](const pair<string, unsigned int>& p1, const pair<string, unsigned int>& p2) {return p1.second > p2.second; });
+
+	sortList.erase(sortList.begin() + 256, sortList.end() );
+	
 	return false;
 }// Quant_Populosity
 
