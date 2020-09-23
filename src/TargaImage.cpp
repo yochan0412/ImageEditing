@@ -244,7 +244,7 @@ bool TargaImage::Quant_Uniform()
 		{
 			data[(i * width + j) * 4] &= 0xE0;//R
 			data[(i * width + j) * 4 + 1] &= 0xE0;//G
-			data[(i * width + j) * 4 + 2] &= 0xC0;//B
+			data[(i * width + j) * 4 + 2] &= 0xC0;//B 
 		}
 	}
 	return true;
@@ -264,25 +264,110 @@ void Store(char red, char green, char blue)
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Quant_Populosity()
 {
-	map<string, unsigned int>list;
-	vector<pair<string, unsigned int>> sortList;
+	struct RGB
+	{
+		unsigned char red;
+		unsigned char green;
+		unsigned char blue;
+
+		bool operator<(const RGB& p2) const
+		{
+			if (this->red < p2.red)
+			{
+				return true;
+			}
+			else if (this->red == p2.red)
+			{
+				if (this->green < p2.green)
+				{
+					return true;
+				}
+				else if (this->green == p2.green)
+				{
+					if (this->blue < p2.blue)
+					{
+						return true;
+					}
+					else
+					{
+						return false;
+					}
+				}
+				else
+				{
+					return false;
+				}
+			}
+			else
+			{
+				return false;
+			}
+		}
+		bool operator>(const RGB& p2) const
+		{
+			if (this->red > p2.red)
+			{
+				return true;
+			}
+			else if (this->red == p2.red)
+			{
+				if (this->green > p2.green)
+				{
+					return true;
+				}
+				else if (this->green == p2.green)
+				{
+					if (this->blue > p2.blue)
+					{
+						return true;
+					}
+					else
+					{
+						return false;
+					}
+				}
+				else
+				{
+					return false;
+				}
+			}
+			else
+			{
+				return false;
+			}
+		}
+
+		bool operator==(const RGB& p2) const
+		{
+			if ((this->red == p2.red) && (this->green == p2.green) && (this->blue == p2.blue))
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
+
+	};
+
+	map<RGB, unsigned int>list;
+	vector<pair<RGB, unsigned int>> sortList;
 
 	for (int i = 0; i < height; i++)
 	{
 		for (int j = 0; j < width; j++)
 		{
 			bool Has_color = false;
-			string temp;
+			RGB temp;
 
 			data[(i * width + j) * 4] &= 0xF8;//R
 			data[(i * width + j) * 4 + 1] &= 0xF8;//G
 			data[(i * width + j) * 4 + 2] &= 0xF8;//B
 
-			temp += to_string(int(data[(i * width + j) * 4]));
-			temp += "/";
-			temp += to_string(int(data[(i * width + j) * 4 + 1]));
-			temp += "/";
-			temp += to_string(int(data[(i * width + j) * 4 + 2]));
+			temp.red = data[(i * width + j) * 4];
+			temp.green = data[(i * width + j) * 4 + 1];
+			temp.blue = data[(i * width + j) * 4 + 2];
 
 			if (list.find(temp) != list.end()) //found
 			{
@@ -300,11 +385,48 @@ bool TargaImage::Quant_Populosity()
 		sortList.push_back(v);
 	}
 
-	sort(sortList.begin(), sortList.end(), [](const pair<string, unsigned int>& p1, const pair<string, unsigned int>& p2) {return p1.second > p2.second; });
+	sort(sortList.begin(), sortList.end(), [](const pair<RGB, unsigned int>& p1, const pair<RGB, unsigned int>& p2) {return p1.second > p2.second; });
 
-	sortList.erase(sortList.begin() + 256, sortList.end() );
-	
-	return false;
+	sortList.erase(sortList.begin() + 256, sortList.end());
+
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			bool FoundClosestColor = false;
+			RGB thisColor{ data[(i * width + j) * 4] ,data[(i * width + j) * 4 + 1] ,data[(i * width + j) * 4 + 2] };
+			RGB closestColor;
+			double minDistance = INFINITY;
+			for (int k = 0; k < 256; k++)
+			{
+				if (sortList[k].first == thisColor)
+				{
+					FoundClosestColor = true;
+					break;
+				}
+				else
+				{
+					double distance;
+					distance = pow((int)(sortList[k].first.red) - thisColor.red, 2) + pow(((int)sortList[k].first.green) - thisColor.green, 2) + pow(((int)sortList[k].first.blue) - thisColor.blue, 2);
+					if (distance < minDistance)
+					{
+						minDistance = distance;
+						closestColor = sortList[k].first;
+					}
+				}
+
+			}
+
+			if (!FoundClosestColor)
+			{
+				data[(i * width + j) * 4] = closestColor.red;
+				data[(i * width + j) * 4 + 1] = closestColor.green;
+				data[(i * width + j) * 4 + 2] = closestColor.blue;
+			}
+		}
+	}
+
+	return true;
 }// Quant_Populosity
 
 
