@@ -209,24 +209,20 @@ TargaImage* TargaImage::Load_Image(char* filename)
 //  success of operation.
 //
 ///////////////////////////////////////////////////////////////////////////////
-bool TargaImage::To_Grayscale()
+bool TargaImage::To_Grayscale()   
 {
 	for (int i = 0; i < height; i++)
 	{
 		for (int j = 0; j < width; j++)
 		{
-			if (i % 2 == 0)
-			{
-				data[(i * width + j) * 4] = 255;//R
-				data[(i * width + j) * 4 + 1] = 0;//G
-				data[(i * width + j) * 4 + 2] = 0;//B
-			}
-			else
-			{
-				data[(i * width + j) * 4] = 0;//R
-				data[(i * width + j) * 4 + 1] = 0;//G
-				data[(i * width + j) * 4 + 2] = 0;//B
-			}
+			int I = 0;
+			I += data[(i * width + j) * 4] * 0.299;//R
+			I += data[(i * width + j) * 4 + 1] * 0.587;//G
+			I += data[(i * width + j) * 4 + 2] * 0.114;//B
+			
+			data[(i * width + j) * 4] = I; //R
+			data[(i * width + j) * 4 + 1] = I; //G
+			data[(i * width + j) * 4 + 2] = I; //B
 		}
 	}
 	return true;
@@ -239,7 +235,7 @@ bool TargaImage::To_Grayscale()
 //  success of operation.
 //
 ///////////////////////////////////////////////////////////////////////////////
-bool TargaImage::Quant_Uniform()
+bool TargaImage::Quant_Uniform()   
 {
 	for (int i = 0; i < height; i++)
 	{
