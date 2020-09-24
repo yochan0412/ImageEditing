@@ -216,7 +216,7 @@ bool TargaImage::To_Grayscale()
 	{
 		for (int j = 0; j < width; j++)
 		{
-			int I = 0;
+			double I = 0;
 			I += data[(i * width + j) * 4] * 0.299;//R
 			I += data[(i * width + j) * 4 + 1] * 0.587;//G
 			I += data[(i * width + j) * 4 + 2] * 0.114;//B
@@ -250,11 +250,6 @@ bool TargaImage::Quant_Uniform()
 	return true;
 }// Quant_Uniform
 
-
-void Store(char red, char green, char blue)
-{
-
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -437,8 +432,28 @@ bool TargaImage::Quant_Populosity()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Dither_Threshold()
 {
-	ClearToBlack();
-	return false;
+	if (this->To_Grayscale())
+	{
+		for (int i = 0; i < height; i++)
+		{
+			for (int j = 0; j < width; j++)
+			{
+				if (data[(i * width + j) * 4] > 127)
+				{
+					data[(i * width + j) * 4] = 255;
+					data[(i * width + j) * 4 + 1] = 255;
+					data[(i * width + j) * 4 + 2] = 255;
+				}
+				else
+				{
+					data[(i * width + j) * 4] = 0;
+					data[(i * width + j) * 4 + 1] = 0;
+					data[(i * width + j) * 4 + 2] = 0;
+				}
+			}
+		}
+	}
+	return true;
 }// Dither_Threshold
 
 
@@ -475,7 +490,54 @@ bool TargaImage::Dither_FS()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Dither_Bright()
 {
-	ClearToBlack();
+	if (this->To_Grayscale())
+	{
+		unsigned long long sum = 0;
+		unsigned long long table[256] = {0};
+
+		for (int i = 0; i < height; i++)
+		{
+			for (int j = 0; j < width; j++)
+			{
+				sum += data[(i * width + j) * 4];
+				table[data[(i * width + j) * 4]]++;
+			}
+		}
+
+		sum /= 255;
+
+		unsigned long long adder = 0;
+		int threshold = 255;
+		for (threshold = 255; threshold >= 0; threshold--)
+		{
+			adder += table[threshold];
+			if (adder >= sum)
+			{
+				break;
+			}
+
+		}
+
+		for (int i = 0; i < height; i++)
+		{
+			for (int j = 0; j < width; j++)
+			{
+				if (data[(i * width + j) * 4] >= threshold)
+				{
+					data[(i * width + j) * 4] = 255;
+					data[(i * width + j) * 4 + 1] = 255;
+					data[(i * width + j) * 4 + 2] = 255;
+				}
+				else
+				{
+					data[(i * width + j) * 4] = 0;
+					data[(i * width + j) * 4 + 1] = 0;
+					data[(i * width + j) * 4 + 2] = 0;
+				}
+			}
+		}
+		
+	}
 	return false;
 }// Dither_Bright
 
