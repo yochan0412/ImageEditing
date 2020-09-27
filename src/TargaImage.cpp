@@ -353,16 +353,11 @@ bool TargaImage::Quant_Populosity()
 	{
 		for (int j = 0; j < width; j++)
 		{
-			bool Has_color = false;
 			RGB temp;
 
-			data[(i * width + j) * 4] &= 0xF8;//R
-			data[(i * width + j) * 4 + 1] &= 0xF8;//G
-			data[(i * width + j) * 4 + 2] &= 0xF8;//B
-
-			temp.red = data[(i * width + j) * 4];
-			temp.green = data[(i * width + j) * 4 + 1];
-			temp.blue = data[(i * width + j) * 4 + 2];
+			temp.red = data[(i * width + j) * 4] & 0xF8;
+			temp.green = data[(i * width + j) * 4 + 1] & 0xF8;
+			temp.blue = data[(i * width + j) * 4 + 2] & 0xF8;
 
 			if (list.find(temp) != list.end()) //found
 			{
@@ -392,32 +387,23 @@ bool TargaImage::Quant_Populosity()
 			RGB thisColor{ data[(i * width + j) * 4] ,data[(i * width + j) * 4 + 1] ,data[(i * width + j) * 4 + 2] };
 			RGB closestColor;
 			double minDistance = INFINITY;
+
 			for (int k = 0; k < 256; k++)
 			{
-				if (sortList[k].first == thisColor)
+				double distance;
+				distance = pow(double(sortList[k].first.red) - double(thisColor.red), 2) + pow(double(sortList[k].first.green) - double(thisColor.green), 2) + pow(double(sortList[k].first.blue) - double(thisColor.blue), 2);
+				if (distance < minDistance)
 				{
-					FoundClosestColor = true;
-					break;
+					minDistance = distance;
+					closestColor = sortList[k].first;
 				}
-				else
-				{
-					double distance;
-					distance = pow((int)(sortList[k].first.red) - thisColor.red, 2) + pow(((int)sortList[k].first.green) - thisColor.green, 2) + pow(((int)sortList[k].first.blue) - thisColor.blue, 2);
-					if (distance < minDistance)
-					{
-						minDistance = distance;
-						closestColor = sortList[k].first;
-					}
-				}
-
 			}
 
-			if (!FoundClosestColor)
-			{
-				data[(i * width + j) * 4] = closestColor.red;
-				data[(i * width + j) * 4 + 1] = closestColor.green;
-				data[(i * width + j) * 4 + 2] = closestColor.blue;
-			}
+
+			data[(i * width + j) * 4] = closestColor.red;
+			data[(i * width + j) * 4 + 1] = closestColor.green;
+			data[(i * width + j) * 4 + 2] = closestColor.blue;
+
 		}
 	}
 
@@ -452,8 +438,12 @@ bool TargaImage::Dither_Threshold()
 				}
 			}
 		}
+		return true;
 	}
-	return true;
+	else
+	{
+		return false;
+	}
 }// Dither_Threshold
 
 
@@ -464,8 +454,35 @@ bool TargaImage::Dither_Threshold()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Dither_Random()
 {
-	ClearToBlack();
-	return false;
+	if (this->To_Grayscale())
+	{
+		for (int i = 0; i < height; i++)
+		{
+			for (int j = 0; j < width; j++)
+			{
+				int temp = rand() % 103 - 51 + data[(i * width + j) * 4];
+
+				if (temp > 127)
+				{
+					temp = 255;
+				}
+				else
+				{
+					temp = 0;
+				}
+
+				data[(i * width + j) * 4] = temp;
+				data[(i * width + j) * 4 + 1] = temp;
+				data[(i * width + j) * 4 + 2] = temp;
+			}
+		}
+
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }// Dither_Random
 
 
@@ -477,8 +494,146 @@ bool TargaImage::Dither_Random()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Dither_FS()
 {
-	ClearToBlack();
-	return false;
+	if (this->To_Grayscale())
+	{
+		vector<vector<float>> new_data;  //left index :y , right index :x
+
+		for (int y = 0; y < height; y++)  //transform 
+		{
+			vector<float> temp;
+
+			for (int x = 0; x < width; x++)
+			{
+				temp.push_back(data[(y * width + x) * 4] / 255.0);
+			}
+			new_data.push_back(temp);
+		}
+
+		for (int y = 0; y < height; y++)
+		{
+			float e; //error
+
+			if (y % 2 == 0)
+			{
+				for (int x = 0; x < width; x++)
+				{
+					if (new_data[y][x] > 0.5)
+					{
+						e = new_data[y][x] - 1;
+						new_data[y][x] = 1;
+					}
+					else
+					{
+						e = new_data[y][x];
+						new_data[y][x] = 0;
+					}
+
+					if ((y + 1) < height)
+					{
+						if ((x - 1) >= 0)
+						{
+							new_data[y + 1][x - 1] += e * (3.0 / 16.0);
+						}
+						if ((x + 1) < width)
+						{
+							new_data[y + 1][x + 1] += e * (1.0 / 16.0);
+						}
+
+						new_data[y + 1][x] += e * (5.0 / 16.0);
+					}
+					if ((x + 1) < width)
+					{
+						new_data[y][x + 1] += e * (7.0 / 16.0);
+					}
+				}
+			}
+			else
+			{
+				for (int x = width - 1; x >= 0; x--)
+				{
+					if (new_data[y][x] > 0.5)
+					{
+						e = new_data[y][x] - 1;
+						new_data[y][x] = 1;
+					}
+					else
+					{
+						e = new_data[y][x];
+						new_data[y][x] = 0;
+					}
+
+					if ((y + 1) < height)
+					{
+						if ((x - 1) >= 0)
+						{
+							new_data[y + 1][x - 1] += e * (1.0 / 16.0);
+						}
+						if ((x + 1) < width)
+						{
+							new_data[y + 1][x + 1] += e * (3.0 / 16.0);
+						}
+
+						new_data[y + 1][x] += e * (5.0 / 16.0);
+					}
+
+					if ((x - 1) >= 0)
+					{
+						new_data[y][x - 1] += e * (7.0 / 16.0);
+					}
+				}
+			}
+
+			/*for (int x = 0; x < width; x++)
+			{
+				if (new_data[y][x] > 0.5)
+				{
+					e = new_data[y][x] - 1;
+					new_data[y][x] = 1;
+				}
+				else
+				{
+					e = new_data[y][x];
+					new_data[y][x] = 0;
+				}
+
+				if ((y + 1) < height)
+				{
+					if ((x - 1) >= 0)
+					{
+						new_data[y + 1][x - 1] += e * 0.1875 ;
+					}
+					if ((x + 1) < width)
+					{
+						new_data[y + 1][x + 1] += e * 0.0625 ;
+					}
+
+					new_data[y + 1][x] += e * 0.3125 ;
+				}
+				if ((x + 1) < width)
+				{
+					new_data[y][x + 1] += e * 0.4375 ;
+				}
+			}*/
+		}
+
+
+		for (int y = 0; y < height; y++)  //restore
+		{
+			for (int x = 0; x < width; x++)
+			{
+				data[(y * width + x) * 4] = new_data[y][x] * 255;
+				data[(y * width + x) * 4 + 1] = new_data[y][x] * 255;
+				data[(y * width + x) * 4 + 2] = new_data[y][x] * 255;
+			}
+		}
+
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+
 }// Dither_FS
 
 
@@ -493,7 +648,7 @@ bool TargaImage::Dither_Bright()
 	if (this->To_Grayscale())
 	{
 		unsigned long long sum = 0;
-		unsigned long long table[256] = {0};
+		unsigned long long table[256] = { 0 };
 
 		for (int i = 0; i < height; i++)
 		{
@@ -536,9 +691,12 @@ bool TargaImage::Dither_Bright()
 				}
 			}
 		}
-		
+		return true;
 	}
-	return false;
+	else
+	{
+		return false;
+	}
 }// Dither_Bright
 
 
@@ -549,8 +707,42 @@ bool TargaImage::Dither_Bright()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Dither_Cluster()
 {
-	ClearToBlack();
-	return false;
+	if (this->To_Grayscale())
+	{
+		const double matrix[4][4] = {
+										{0.7059,0.0588,0.4706,0.1765},
+										{0.3529,0.9412,0.7647,0.5294},
+										{0.5882,0.8235,0.8824,0.2941},
+										{0.2353,0.4118,0.1176,0.6471}
+		};
+
+		for (int i = 0; i < height; i++)
+		{
+			for (int j = 0; j < width; j++)
+			{
+
+				if (data[(i * width + j) * 4] > matrix[j % 4][i % 4] * 255)
+				{
+					data[(i * width + j) * 4] = 255;
+					data[(i * width + j) * 4 + 1] = 255;
+					data[(i * width + j) * 4 + 2] = 255;
+				}
+				else
+				{
+					data[(i * width + j) * 4] = 0;
+					data[(i * width + j) * 4 + 1] = 0;
+					data[(i * width + j) * 4 + 2] = 0;
+				}
+			}
+		}
+
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+
 }// Dither_Cluster
 
 
