@@ -390,8 +390,12 @@ bool TargaImage::Quant_Populosity()
 
 			for (int k = 0; k < 256; k++)
 			{
-				double distance;
-				distance = pow(double(sortList[k].first.red) - double(thisColor.red), 2) + pow(double(sortList[k].first.green) - double(thisColor.green), 2) + pow(double(sortList[k].first.blue) - double(thisColor.blue), 2);
+				double distance = 0;
+
+				distance += (double(sortList[k].first.red) - double(thisColor.red)) * (double(sortList[k].first.red) - double(thisColor.red));
+				distance += (double(sortList[k].first.green) - double(thisColor.green)) * (double(sortList[k].first.green) - double(thisColor.green));
+				distance += (double(sortList[k].first.blue) - double(thisColor.blue)) * (double(sortList[k].first.blue) - double(thisColor.blue));
+
 				if (distance < minDistance)
 				{
 					minDistance = distance;
@@ -582,40 +586,7 @@ bool TargaImage::Dither_FS()
 					}
 				}
 			}
-
-			/*for (int x = 0; x < width; x++)
-			{
-				if (new_data[y][x] > 0.5)
-				{
-					e = new_data[y][x] - 1;
-					new_data[y][x] = 1;
-				}
-				else
-				{
-					e = new_data[y][x];
-					new_data[y][x] = 0;
-				}
-
-				if ((y + 1) < height)
-				{
-					if ((x - 1) >= 0)
-					{
-						new_data[y + 1][x - 1] += e * 0.1875 ;
-					}
-					if ((x + 1) < width)
-					{
-						new_data[y + 1][x + 1] += e * 0.0625 ;
-					}
-
-					new_data[y + 1][x] += e * 0.3125 ;
-				}
-				if ((x + 1) < width)
-				{
-					new_data[y][x + 1] += e * 0.4375 ;
-				}
-			}*/
 		}
-
 
 		for (int y = 0; y < height; y++)  //restore
 		{
@@ -720,8 +691,7 @@ bool TargaImage::Dither_Cluster()
 		{
 			for (int j = 0; j < width; j++)
 			{
-
-				if (data[(i * width + j) * 4] > matrix[j % 4][i % 4] * 255)
+				if (data[(i * width + j) * 4] >= (matrix[j % 4][i % 4] * 255))
 				{
 					data[(i * width + j) * 4] = 255;
 					data[(i * width + j) * 4 + 1] = 255;
@@ -755,8 +725,214 @@ bool TargaImage::Dither_Cluster()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Dither_Color()
 {
-	ClearToBlack();
-	return false;
+	vector<vector<float>> red_data, green_data, blue_data;  //left index :y , right index :x
+
+
+	for (int y = 0; y < height; y++)  //transform
+	{
+		vector<float> temp_1, temp_2, temp_3;
+
+		for (int x = 0; x < width; x++)
+		{
+			temp_1.push_back(data[(y * width + x) * 4] / 255.0);
+			temp_2.push_back(data[(y * width + x) * 4 + 1] / 255.0);
+			temp_3.push_back(data[(y * width + x) * 4 + 2] / 255.0);
+		}
+		red_data.push_back(temp_1);
+		green_data.push_back(temp_2);
+		blue_data.push_back(temp_3);
+	}
+
+	for (int y = 0; y < height; y++)
+	{
+		float e_1, e_2, e_3; //error
+		float old_red, old_green, old_blue;
+
+		if (y % 2 == 0)
+		{
+			for (int x = 0; x < width; x++)
+			{
+				old_red = red_data[y][x];
+				old_green = green_data[y][x];
+				old_blue = blue_data[y][x];
+
+				if (red_data[y][x] < 18 / 255.0)  //red
+					red_data[y][x] = 0;
+				else if ((red_data[y][x] < 54.5 / 255.0))
+					red_data[y][x] = 36.0 / 255.0;
+				else if ((red_data[y][x] < 91.0 / 255.0))
+					red_data[y][x] = 73.0 / 255.0;
+				else if ((red_data[y][x] < 127.5 / 255.0))
+					red_data[y][x] = 109.0 / 255.0;
+				else if ((red_data[y][x] < 164.0 / 255.0))
+					red_data[y][x] = 146.0 / 255.0;
+				else if ((red_data[y][x] < 200.5 / 255.0))
+					red_data[y][x] = 182.0 / 255.0;
+				else if ((red_data[y][x] < 237.0 / 255.0))
+					red_data[y][x] = 219.0 / 255.0;
+				else if (red_data[y][x] >= 237.0 / 255.0)
+					red_data[y][x] = 1;
+
+				e_1 = old_red - red_data[y][x]; //red error
+
+				if (green_data[y][x] < 18.0 / 255.0)  //green
+					green_data[y][x] = 0;
+				else if ((green_data[y][x] < 54.5 / 255.0))
+					green_data[y][x] = 36.0 / 255.0;
+				else if ((green_data[y][x] < 91.0 / 255.0))
+					green_data[y][x] = 73.0 / 255.0;
+				else if ((green_data[y][x] < 127.5 / 255.0))
+					green_data[y][x] = 109.0 / 255.0;
+				else if ((green_data[y][x] < 164.0 / 255.0))
+					green_data[y][x] = 146.0 / 255.0;
+				else if ((green_data[y][x] < 200.5 / 255.0))
+					green_data[y][x] = 182.0 / 255.0;
+				else if ((green_data[y][x] < 237.0 / 255.0))
+					green_data[y][x] = 219.0 / 255.0;
+				else if (green_data[y][x] >= 237.0 / 255.0)
+					green_data[y][x] = 1;
+
+				e_2 = old_green - green_data[y][x];  //green error
+
+				if (blue_data[y][x] < 42.5 / 255.0) //blue
+					blue_data[y][x] = 0;
+				else if ((blue_data[y][x] < 127.5 / 255.0))
+					blue_data[y][x] = 85.0 / 255.0;
+				else if ((blue_data[y][x] < 212.5 / 255.0))
+					blue_data[y][x] = 170.0 / 255.0;
+				else if (blue_data[y][x] >= (212.5 / 255.0))
+					blue_data[y][x] = 1;
+
+				e_3 = old_blue - blue_data[y][x];  //blue error
+
+
+
+				if ((y + 1) < height)
+				{
+					if ((x - 1) >= 0)
+					{
+						red_data[y + 1][x - 1] += e_1 * (3.0 / 16.0);
+						green_data[y + 1][x - 1] += e_2 * (3.0 / 16.0);
+						blue_data[y + 1][x - 1] += e_3 * (3.0 / 16.0);
+					}
+					if ((x + 1) < width)
+					{
+						red_data[y + 1][x + 1] += e_1 * (1.0 / 16.0);
+						green_data[y + 1][x + 1] += e_2 * (1.0 / 16.0);
+						blue_data[y + 1][x + 1] += e_3 * (1.0 / 16.0);
+					}
+
+					red_data[y + 1][x] += e_1 * (5.0 / 16.0);
+					green_data[y + 1][x] += e_2 * (5.0 / 16.0);
+					blue_data[y + 1][x] += e_3 * (5.0 / 16.0);
+				}
+				if ((x + 1) < width)
+				{
+					red_data[y][x + 1] += e_1 * (7.0 / 16.0);
+					green_data[y][x + 1] += e_2 * (7.0 / 16.0);
+					blue_data[y][x + 1] += e_3 * (7.0 / 16.0);
+				}
+			}
+		}
+		else
+		{
+			for (int x = width - 1; x >= 0; x--)
+			{
+				old_red = red_data[y][x];
+				old_green = green_data[y][x];
+				old_blue = blue_data[y][x];
+
+				if (red_data[y][x] < 18.0 / 255.0)  //red
+					red_data[y][x] = 0;
+				else if ((red_data[y][x] < 54.5 / 255.0))
+					red_data[y][x] = 36.0 / 255.0;
+				else if ((red_data[y][x] < 91.0 / 255.0))
+					red_data[y][x] = 73.0 / 255.0;
+				else if ((red_data[y][x] < 127.5 / 255.0))
+					red_data[y][x] = 109.0 / 255.0;
+				else if ((red_data[y][x] < 164.0 / 255.0))
+					red_data[y][x] = 146.0 / 255.0;
+				else if ((red_data[y][x] < 200.5 / 255.0))
+					red_data[y][x] = 182.0 / 255.0;
+				else if ((red_data[y][x] < 237.0 / 255.0))
+					red_data[y][x] = 219.0 / 255.0;
+				else if (red_data[y][x] >= 237.0 / 255.0)
+					red_data[y][x] = 1;
+
+				e_1 = old_red - red_data[y][x]; //red error
+
+				if (green_data[y][x] < 18.0 / 255.0)  //green
+					green_data[y][x] = 0;
+				else if ((green_data[y][x] < 54.5 / 255.0))
+					green_data[y][x] = 36.0 / 255.0;
+				else if ((green_data[y][x] < 91.0 / 255.0))
+					green_data[y][x] = 73.0 / 255.0;
+				else if ((green_data[y][x] < 127.5 / 255.0))
+					green_data[y][x] = 109.0 / 255.0;
+				else if ((green_data[y][x] < 164.0 / 255.0))
+					green_data[y][x] = 146.0 / 255.0;
+				else if ((green_data[y][x] < 200.5 / 255.0))
+					green_data[y][x] = 182.0 / 255.0;
+				else if ((green_data[y][x] < 237.0 / 255.0))
+					green_data[y][x] = 219.0 / 255.0;
+				else if (green_data[y][x] >= 237.0 / 255.0)
+					green_data[y][x] = 1;
+
+				e_2 = old_green - green_data[y][x];  //green error
+
+				if (blue_data[y][x] < 42.5 / 255.0) //blue
+					blue_data[y][x] = 0;
+				else if ((blue_data[y][x] < 127.5 / 255.0))
+					blue_data[y][x] = 85.0 / 255.0;
+				else if ((blue_data[y][x] < 212.5 / 255.0))
+					blue_data[y][x] = 170.0 / 255.0;
+				else if (blue_data[y][x] >= (212.5 / 255.0))
+					blue_data[y][x] = 1;
+
+				e_3 = old_blue - blue_data[y][x];  //blue error
+
+				if ((y + 1) < height)
+				{
+					if ((x - 1) >= 0)
+					{
+						red_data[y + 1][x - 1] += e_1 * (1.0 / 16.0);
+						green_data[y + 1][x - 1] += e_2 * (1.0 / 16.0);
+						blue_data[y + 1][x - 1] += e_3 * (1.0 / 16.0);
+					}
+					if ((x + 1) < width)
+					{
+						red_data[y + 1][x + 1] += e_1 * (3.0 / 16.0);
+						green_data[y + 1][x + 1] += e_2 * (3.0 / 16.0);
+						blue_data[y + 1][x + 1] += e_3 * (3.0 / 16.0);
+					}
+
+					red_data[y + 1][x] += e_1 * (5.0 / 16.0);
+					green_data[y + 1][x] += e_2 * (5.0 / 16.0);
+					blue_data[y + 1][x] += e_3 * (5.0 / 16.0);
+				}
+				if ((x - 1) >= 0)
+				{
+					red_data[y][x - 1] += e_1 * (7.0 / 16.0);
+					green_data[y][x - 1] += e_2 * (7.0 / 16.0);
+					blue_data[y][x - 1] += e_3 * (7.0 / 16.0);
+				}
+			}
+		}
+	}
+
+	for (int y = 0; y < height; y++)  //restore
+	{
+		for (int x = 0; x < width; x++)
+		{
+			data[(y * width + x) * 4] = red_data[y][x] * 255;
+			data[(y * width + x) * 4 + 1] = green_data[y][x] * 255;
+			data[(y * width + x) * 4 + 2] = blue_data[y][x] * 255;
+		}
+	}
+
+
+
+	return true;
 }// Dither_Color
 
 
@@ -897,8 +1073,52 @@ bool TargaImage::Difference(TargaImage* pImage)
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Filter_Box()
 {
-	ClearToBlack();
-	return false;
+	char* newImage = new char[width * height * 4];
+	for (int y = 0; y < height; y++)  
+	{
+		for (int x = 0; x < width; x++)
+		{
+			int sum_red = 0, sum_green = 0, sum_blue = 0;
+
+			for (int j = -2; j <= 2; j++)
+			{
+				for (int i = -2; i <= 2; i++)
+				{
+					int surround_x, surround_y;
+					if (((x + i) < 0) || ((x + i) >= width))
+					{
+						surround_x = x - i;
+					}
+					else
+					{
+						surround_x = x + i;
+					}
+
+					if (((y + j) < 0) || ((y + j) >= height))
+					{
+						surround_y = y - j;
+					}
+					else
+					{
+						surround_y = y + j;
+					}
+
+					sum_red += data[(surround_y * width + surround_x) * 4];
+					sum_green += data[(surround_y * width + surround_x) * 4 + 1];
+					sum_blue += data[(surround_y * width + surround_x) * 4 + 2];
+				}
+			}
+			newImage[(y * width + x) * 4] = sum_red / 25;
+			newImage[(y * width + x) * 4 + 1] = sum_green / 25;
+			newImage[(y * width + x) * 4 + 2] = sum_blue / 25;
+			newImage[(y * width + x) * 4 + 3] = 255;
+		}
+	}
+
+	memcpy(data, newImage, sizeof(char) * width * height * 4);
+	delete[] newImage;
+
+	return true;
 }// Filter_Box
 
 
