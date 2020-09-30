@@ -727,7 +727,6 @@ bool TargaImage::Dither_Color()
 {
 	vector<vector<float>> red_data, green_data, blue_data;  //left index :y , right index :x
 
-
 	for (int y = 0; y < height; y++)  //transform
 	{
 		vector<float> temp_1, temp_2, temp_3;
@@ -930,8 +929,6 @@ bool TargaImage::Dither_Color()
 		}
 	}
 
-
-
 	return true;
 }// Dither_Color
 
@@ -1073,8 +1070,8 @@ bool TargaImage::Difference(TargaImage* pImage)
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Filter_Box()
 {
-	char* newImage = new char[width * height * 4];
-	for (int y = 0; y < height; y++)  
+	unsigned char* newImage = new unsigned char[width * height * 4];
+	for (int y = 0; y < height; y++)
 	{
 		for (int x = 0; x < width; x++)
 		{
@@ -1115,7 +1112,7 @@ bool TargaImage::Filter_Box()
 		}
 	}
 
-	memcpy(data, newImage, sizeof(char) * width * height * 4);
+	memcpy(data, newImage, sizeof(unsigned char) * width * height * 4);
 	delete[] newImage;
 
 	return true;
@@ -1130,8 +1127,59 @@ bool TargaImage::Filter_Box()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Filter_Bartlett()
 {
-	ClearToBlack();
-	return false;
+	unsigned char* newImage = new unsigned char[width * height * 4];
+	const int matrix[5][5] = {
+								{1,2,3,2,1},
+								{2,4,6,4,2},
+								{3,6,9,6,3},
+								{2,4,6,4,2},
+								{1,2,3,2,1}
+	};
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			int sum_red = 0, sum_green = 0, sum_blue = 0;
+
+			for (int j = -2; j <= 2; j++)
+			{
+				for (int i = -2; i <= 2; i++)
+				{
+					int surround_x, surround_y;
+					if (((x + i) < 0) || ((x + i) >= width))
+					{
+						surround_x = x - i;
+					}
+					else
+					{
+						surround_x = x + i;
+					}
+
+					if (((y + j) < 0) || ((y + j) >= height))
+					{
+						surround_y = y - j;
+					}
+					else
+					{
+						surround_y = y + j;
+					}
+
+					sum_red += data[(surround_y * width + surround_x) * 4] * matrix[j + 2][i + 2];
+					sum_green += data[(surround_y * width + surround_x) * 4 + 1] * matrix[j + 2][i + 2];
+					sum_blue += data[(surround_y * width + surround_x) * 4 + 2] * matrix[j + 2][i + 2];
+				}
+			}
+			newImage[(y * width + x) * 4] = sum_red / 81;
+			newImage[(y * width + x) * 4 + 1] = sum_green / 81;
+			newImage[(y * width + x) * 4 + 2] = sum_blue / 81;
+			newImage[(y * width + x) * 4 + 3] = 255;
+		}
+	}
+
+	memcpy(data, newImage, sizeof(unsigned char) * width * height * 4);
+	delete[] newImage;
+
+	return true;
 }// Filter_Bartlett
 
 
@@ -1143,8 +1191,59 @@ bool TargaImage::Filter_Bartlett()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Filter_Gaussian()
 {
-	ClearToBlack();
-	return false;
+	unsigned char* newImage = new unsigned char[width * height * 4];
+	const int matrix[5][5] = {
+								{1,4,6,4,1},
+								{4,16,24,16,4},
+								{6,24,36,24,6},
+								{4,16,24,16,4},
+								{1,4,6,4,1}
+	};
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			int sum_red = 0, sum_green = 0, sum_blue = 0;
+
+			for (int j = -2; j <= 2; j++)
+			{
+				for (int i = -2; i <= 2; i++)
+				{
+					int surround_x, surround_y;
+					if (((x + i) < 0) || ((x + i) >= width))
+					{
+						surround_x = x - i;
+					}
+					else
+					{
+						surround_x = x + i;
+					}
+
+					if (((y + j) < 0) || ((y + j) >= height))
+					{
+						surround_y = y - j;
+					}
+					else
+					{
+						surround_y = y + j;
+					}
+
+					sum_red += data[(surround_y * width + surround_x) * 4] * matrix[j + 2][i + 2];
+					sum_green += data[(surround_y * width + surround_x) * 4 + 1] * matrix[j + 2][i + 2];
+					sum_blue += data[(surround_y * width + surround_x) * 4 + 2] * matrix[j + 2][i + 2];
+				}
+			}
+			newImage[(y * width + x) * 4] = sum_red / 256;
+			newImage[(y * width + x) * 4 + 1] = sum_green / 256;
+			newImage[(y * width + x) * 4 + 2] = sum_blue / 256;
+			newImage[(y * width + x) * 4 + 3] = 255;
+		}
+	}
+
+	memcpy(data, newImage, sizeof(unsigned char) * width * height * 4);
+	delete[] newImage;
+
+	return true;
 }// Filter_Gaussian
 
 ///////////////////////////////////////////////////////////////////////////////
