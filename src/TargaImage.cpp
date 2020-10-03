@@ -1309,8 +1309,61 @@ bool TargaImage::NPR_Paint()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Half_Size()
 {
-	ClearToBlack();
-	return false;
+	unsigned char* newImage = new unsigned char[(width / 2) * (height / 2) * 4];
+	float matrix[3][3] = {
+							{0.0625,0.125,0.0625},
+							{0.125,0.25,0.125},
+							{0.0625,0.125,0.0625}
+	};
+
+	for (int y = 0; y < height / 2; y++)
+	{
+		for (int x = 0; x < width / 2; x++)
+		{
+			float sum_red = 0, sum_green = 0, sum_blue = 0;
+
+			for (int j = -1; j <= 1; j++)
+			{
+				for (int i = -1; i <= 1; i++)
+				{
+					int surround_x, surround_y;
+					if (((2 * x + i) < 0) || ((2 * x + i) >= width))
+					{
+						surround_x = 2 * x - i;
+					}
+					else
+					{
+						surround_x = 2 * x + i;
+					}
+
+					if (((2 * y + j) < 0) || ((2 * y + j) >= height))
+					{
+						surround_y = 2 * y - j;
+					}
+					else
+					{
+						surround_y = 2 * y + j;
+					}
+
+					sum_red += data[(surround_y * width + surround_x) * 4] * matrix[i + 1][j + 1];
+					sum_green += data[(surround_y * width + surround_x) * 4 + 1] * matrix[i + 1][j + 1];
+					sum_blue += data[(surround_y * width + surround_x) * 4 + 2] * matrix[i + 1][j + 1];
+				}
+			}
+
+			newImage[(y * (width / 2) + x) * 4] = sum_red;
+			newImage[(y * (width / 2) + x) * 4 + 1] = sum_green;
+			newImage[(y * (width / 2) + x) * 4 + 2] = sum_blue;
+			newImage[(y * (width / 2) + x) * 4 + 3] = 255;
+		}
+	}
+
+	width /= 2;
+	height /= 2;
+	delete[] data;
+	data = newImage;
+
+	return true;
 }// Half_Size
 
 
@@ -1321,8 +1374,142 @@ bool TargaImage::Half_Size()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Double_Size()
 {
-	ClearToBlack();
-	return false;
+	unsigned char* newImage = new unsigned char[(width * 2) * (height * 2) * 4];
+	float matrix_even[3][3] = {
+							{0.0625,0.125,0.0625},
+							{0.125,0.25,0.125},
+							{0.0625,0.125,0.0625}
+	};
+
+	float matrix_odd[4][4] = {
+							{0.015625,0.046875,0.046875,0.015625},
+							{0.046875,0.140625,0.140625,0.046875},
+							{0.046875,0.140625,0.140625,0.046875},
+							{0.015625,0.046875,0.046875,0.015625}
+	};
+
+	float matrix_even_odd[4][3] = {
+							{0.03125,0.0625,0.03125},
+							{0.09375,0.18755,0.09375},
+							{0.09375,0.18755,0.09375},
+							{0.03125,0.0625,0.03125}
+	};
+
+	for (int y = 0; y < height * 2; y++)
+	{
+		for (int x = 0; x < width * 2; x++)
+		{
+			float sum_red = 0, sum_green = 0, sum_blue = 0;
+			if ((x % 2 == 0) && (y % 2 == 0))
+			{
+				for (int j = -1; j <= 1; j++)
+				{
+					for (int i = -1; i <= 1; i++)
+					{
+						int surround_x, surround_y;
+						if (((x / 2 + i) < 0) || ((x / 2 + i) >= width))
+						{
+							surround_x = (x / 2) - i;
+						}
+						else
+						{
+							surround_x = (x / 2) + i;
+						}
+
+						if (((y / 2 + j) < 0) || ((y / 2 + j) >= height))
+						{
+							surround_y = y / 2 - j;
+						}
+						else
+						{
+							surround_y = y / 2 + j;
+						}
+
+						sum_red += data[(surround_y * width + surround_x) * 4] * matrix_even[i + 1][j + 1];
+						sum_green += data[(surround_y * width + surround_x) * 4 + 1] * matrix_even[i + 1][j + 1];
+						sum_blue += data[(surround_y * width + surround_x) * 4 + 2] * matrix_even[i + 1][j + 1];
+					}
+				}
+			}
+			else if ((x % 2 == 1) && (y % 2 == 1))
+			{
+				for (int j = -1; j <= 2; j++)
+				{
+					for (int i = -1; i <= 2; i++)
+					{
+						int surround_x, surround_y;
+						if (((x / 2 + i) < 0) || ((x / 2 + i) >= width))
+						{
+							surround_x = (x / 2) - i;
+						}
+						else
+						{
+							surround_x = (x / 2) + i;
+						}
+
+						if (((y / 2 + j) < 0) || ((y / 2 + j) >= height))
+						{
+							surround_y = y / 2 - j;
+						}
+						else
+						{
+							surround_y = y / 2 + j;
+						}
+
+						sum_red += data[(surround_y * width + surround_x) * 4] * matrix_odd[i + 1][j + 1];
+						sum_green += data[(surround_y * width + surround_x) * 4 + 1] * matrix_odd[i + 1][j + 1];
+						sum_blue += data[(surround_y * width + surround_x) * 4 + 2] * matrix_odd[i + 1][j + 1];
+					}
+				}
+			}
+			else if (((x % 2 == 0) && (y % 2 == 1)) || ((x % 2 == 1) && (y % 2 == 0)))
+			{
+				for (int j = -1; j <= 2; j++)
+				{
+					for (int i = -1; i <= 1; i++)
+					{
+						int surround_x, surround_y;
+						if (((x / 2 + i) < 0) || ((x / 2 + i) >= width))
+						{
+							surround_x = (x / 2) - i;
+						}
+						else
+						{
+							surround_x = (x / 2) + i;
+						}
+
+						if (((y / 2 + j) < 0) || ((y / 2 + j) >= height))
+						{
+							surround_y = y / 2 - j;
+						}
+						else
+						{
+							surround_y = y / 2 + j;
+						}
+
+						sum_red += data[(surround_y * width + surround_x) * 4] * matrix_even_odd[j + 1][i + 1];
+						sum_green += data[(surround_y * width + surround_x) * 4 + 1] * matrix_even_odd[j + 1][i + 1];
+						sum_blue += data[(surround_y * width + surround_x) * 4 + 2] * matrix_even_odd[j + 1][i + 1];
+					}
+				}
+			}
+
+
+
+			newImage[(y * (width * 2) + x) * 4] = sum_red;
+			newImage[(y * (width * 2) + x) * 4 + 1] = sum_green;
+			newImage[(y * (width * 2) + x) * 4 + 2] = sum_blue;
+			newImage[(y * (width * 2) + x) * 4 + 3] = 255;
+		}
+	}
+
+	width *= 2;
+	height *= 2;
+
+	delete[] data;
+	data = newImage;
+
+	return true;
 }// Double_Size
 
 
