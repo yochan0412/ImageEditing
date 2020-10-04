@@ -1462,7 +1462,7 @@ bool TargaImage::Double_Size()
 					}
 				}
 			}
-			else if (((x % 2 == 0) && (y % 2 == 1)) || ((x % 2 == 1) && (y % 2 == 0)))
+			else if ((x % 2 == 0) && (y % 2 == 1))
 			{
 				for (int j = -1; j <= 2; j++)
 				{
@@ -1490,6 +1490,38 @@ bool TargaImage::Double_Size()
 						sum_red += data[(surround_y * width + surround_x) * 4] * matrix_even_odd[j + 1][i + 1];
 						sum_green += data[(surround_y * width + surround_x) * 4 + 1] * matrix_even_odd[j + 1][i + 1];
 						sum_blue += data[(surround_y * width + surround_x) * 4 + 2] * matrix_even_odd[j + 1][i + 1];
+					}
+				}
+			}
+
+			else if ((x % 2 == 1) && (y % 2 == 0))
+			{
+				for (int j = -1; j <= 1; j++)
+				{
+					for (int i = -1; i <= 2; i++)
+					{
+						int surround_x, surround_y;
+						if (((x / 2 + i) < 0) || ((x / 2 + i) >= width))
+						{
+							surround_x = (x / 2) - i;
+						}
+						else
+						{
+							surround_x = (x / 2) + i;
+						}
+
+						if (((y / 2 + j) < 0) || ((y / 2 + j) >= height))
+						{
+							surround_y = y / 2 - j;
+						}
+						else
+						{
+							surround_y = y / 2 + j;
+						}
+
+						sum_red += data[(surround_y * width + surround_x) * 4] * matrix_even_odd[i + 1][j + 1];
+						sum_green += data[(surround_y * width + surround_x) * 4 + 1] * matrix_even_odd[i + 1][j + 1];
+						sum_blue += data[(surround_y * width + surround_x) * 4 + 2] * matrix_even_odd[i + 1][j + 1];
 					}
 				}
 			}
